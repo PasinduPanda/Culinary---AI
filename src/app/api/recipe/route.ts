@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash-002",
+            model: "gemini-2.5-flash",
             tools: [
                 {
                     googleSearch: {},
@@ -32,25 +32,48 @@ export async function POST(request: Request) {
         });
 
         const prompt = `Find an authentic recipe for ${dish} from ${country}. 
-    Provide the following details in a structured JSON format (but return the response as plain text/markdown suitable for rendering, or just structured text I can parse, actually let's stick to a nice markdown response with citations):
-    1. Title of the Dish
-    2. Brief description/history
-    3. Ingredients list with measurements
-    4. Step-by-step cooking instructions
-    5. Nutritional information per serving (Calories, Protein, Carbs, Fat)
-    6. Tips for authenticity
-    
-    Ensure the source grounding metadata is available for citations.`;
+        Return the response AS A SINGLE JSON OBJECT strictly matching this structure:
+        {
+          "title": "Dish Name",
+          "description": "Short history/description",
+          "prepTime": "e.g. 20 min",
+          "cookTime": "e.g. 45 min",
+          "servings": 4,
+          "tips": [
+            { "id": "t1", "text": "Tip text" }
+          ],
+          "steps": [
+            { "number": 1, "instruction": "Step instruction" }
+          ]
+        }
+        
+        Ensure the data is grounded in real authentic sources. No markdown outside the JSON.`;
 
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
+        // More robust JSON extraction
+        let jsonString = text;
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) {
+            jsonString = match[0];
+        }
+
+        let recipeData;
+        try {
+            recipeData = JSON.parse(jsonString);
+        } catch (e) {
+            console.error("JSON Parse Error. Full text:", text);
+            throw new Error("Failed to parse recipe data. The AI returned an invalid format.");
+        }
+
+
         // Extract grounding metadata if available (it enables citations)
         const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
 
         return NextResponse.json({
-            text,
+            recipe: recipeData,
             groundingMetadata,
         });
     } catch (error) {

@@ -1,15 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  --background: #0f172a;
-  --foreground: #f8fafc;
+@theme {
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
 }
 
-body {
-  color: var(--foreground);
-  background: radial-gradient(circle at top center, #1e293b, #0f172a);
-  font-family: Arial, Helvetica, sans-serif;
-  min-height: 100vh;
+@layer base {
+  body {
+    @apply bg-white text-neutral-900 antialiased;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
 }
+
+@plugin "@tailwindcss/typography";
